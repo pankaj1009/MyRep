@@ -1,0 +1,147 @@
+<apex:page id="weahterAlerPage" sidebar="bar" controller="WeatherAlertMapNListController">
+<head>
+    <script type="text/javascript">
+        function ChangeMapPoint(latitude, longitude)
+        {
+            var mapUrl = '/apex/WeatherMap?lat=' + latitude + '&lon=' + longitude;
+            //alert(mapUrl);
+            var eleFrame = document.getElementById('weatherMap');
+            if(eleFrame!=null)
+            {
+                eleFrame.src = mapUrl ;
+            }
+        }
+        function toggleProjectSection(obj,obj1,obj2) 
+        {
+            var el = document.getElementById(obj);
+            if ( el.style.display != 'none' ) 
+            {
+                el.style.display = 'none';
+            }
+            else 
+            {
+                el.style.display = '';
+            }
+            
+            var e2 = document.getElementById(obj1);
+            if ( e2.style.display != 'none' ) 
+            {
+                e2.style.display = 'none';
+            }
+            else
+            {
+                e2.style.display = '';
+            }
+            
+            var e3 = document.getElementById(obj2);
+            if ( e2.style.display != 'none' ) 
+            {
+                e3.style.display = 'none';
+            }
+            else 
+            {
+                e3.style.display = '';
+            }
+        }
+    </script>
+</head>
+<body> 
+<apex:form id="form">
+<apex:messages style="Color:red;" ></apex:messages>
+
+<table width="100%" cellspacing="0" cellpadding="0">
+<tr>
+   <td width="23%" valign="top" >
+    <apex:outputpanel style="">
+        <!-- BJM 2012-03-13 Removed as per Fred's instructions.
+         <apex:image url="{!$Resource.Radar_Intensity}" />
+        -->
+        <apex:outputLabel style="font-family:verdana; color:#777777; font-size:10px;">Alert generated on: <b>{!AlertMessage.GeneratedAtParsed}</b></apex:outputLabel>
+        <br/>        
+        <apex:outputLabel style="font-family:verdana; color:#777777; font-size:10px;">List of alerts grouped by State (displaying max. 50 per warning): </apex:outputLabel>        
+        <br/> 
+    </apex:outputpanel>
+    <br/>
+    <apex:outputLabel style="font-family:verdana; color:#777777; font-size:12px;">Filter: </apex:outputLabel>
+    <apex:selectList id="alertTypes" value="{!searchText}" size="1">
+        <apex:selectOptions value="{!alertTypes}"></apex:selectOptions>
+    </apex:selectList>
+    <!-- <apex:InputText id="searchTextField" value="{!searchText}"/>-->
+    <apex:commandButton id="searchWarning" value="Go" action="{!doSearch}" />
+    <div style="height:600px;overflow:auto;">
+        <apex:dataTable width="98%" bgcolor="#E6F9FC"  border="1px" style="border-color:#1797C0;" cellpadding="5" value="{!ProcessedStateWarnings}" var="stateWarning">
+            <apex:column width="98%">
+                <apex:outputpanel id="showState" style="float:left;">
+                     <apex:image url="{!$Resource.Plus_Image}" onclick="toggleProjectSection('{!$Component.panelStateWarning}','{!$Component.hideState}','{!$Component.showState}')" title="Expand - State"/>
+                </apex:outputpanel>
+                <apex:outputpanel id="hideState" style="display:none; float:left;">
+                    <apex:image url="{!$Resource.Minus_Image}" onclick="javascript:toggleProjectSection('{!$Component.panelStateWarning}','{!$Component.showState}','{!$Component.hideState}')" title="Collapse - State"/>
+                </apex:outputpanel>
+                <apex:outputText style="font-family:verdana;font-size:100%;font-weight:bold; vertical-align:top;float:left; margin:2px 0 0 0;" value="{!stateWarning.State}" title="{!stateWarning.State}" />
+                <apex:outputpanel id="panelStateWarning" style="display:none; float:left; margin:0 0 0 6px;">
+                    <apex:dataTable width="98%" bgcolor="#FAF7F7"  border="1px" style="border-color:#1797C0; margin:0 0 4px 0;"  cellpadding="3" value="{!stateWarning.Warnings}" var="warning" >
+                       <apex:column width="98%" >
+                           <apex:outputText style="font-family:verdana;color:red;font-size:80%;font-weight:bold; float:left; margin:3px 0 0 0" value="# of Warnings - {!warning.IndWarningCount}"/>
+                           <br/>
+                           <ul style="padding: 0;">
+                           <apex:dataTable value="{!warning.IndividualWarningList}" var="indWarning">
+                               <apex:column width="98%">
+                                   <li style="float: left;">    
+                                       <apex:outputText style="font-family:verdana; color:#303030; font-size:11px; float:left; padding:0 0 5px 0;" value="({!indWarning.Severity}): {!indWarning.Title}" title="{!indWarning.Warning}"/>
+                                       <br/>
+                                       <apex:outputpanel id="showWarning" style="float:left; font-size:10px; padding:0 0 5px 0;">
+                                            <a style="color:#1797C0;" href="javascript:toggleProjectSection('{!$Component.warningSummary}','{!$Component.hideWarning}','{!$Component.showWarning}')">See Warning..</a>
+                                            <br/>
+                                       </apex:outputpanel>
+                                       <apex:outputpanel id="hideWarning" style="display:none; float:left; font-size:10px; padding:0 0 5px 0; color:#1797C0;" >       
+                                            <a style="color:#1797C0;" href="javascript:toggleProjectSection('{!$Component.warningSummary}','{!$Component.showWarning}','{!$Component.hideWarning}')">..Hide Warning</a>
+                                            <br/>
+                                       </apex:outputpanel>
+                                       <br/>
+                                       <apex:outputpanel id="warningSummary" style="display:none; float:left; font-family:verdana; color:#777777; font-size:5px; float:left; padding:0 4px 5px 3px;">
+                                            <apex:outputText style="font-family:verdana; font-size:9px;" value="{!indWarning.Warning}"/>
+                                            <br/>
+                                       </apex:outputpanel>
+                                   </li>
+                                </apex:column>   
+                           </apex:dataTable>
+                           </ul>   
+                           <apex:outputpanel id="plusimage" style="float:left;">
+                               <apex:image url="{!$Resource.Plus_Image}" onclick="toggleProjectSection('{!$Component.inlinetablesec}','{!$Component.minusimage}','{!$Component.plusimage}')" title="Expand - Affected Projects"/> 
+                           </apex:outputpanel>
+                           <apex:outputpanel id="minusimage" style="display:none; float:left;">
+                               <apex:image url="{!$Resource.Minus_Image}" onclick="toggleProjectSection('{!$Component.inlinetablesec}','{!$Component.plusimage}','{!$Component.minusimage}')" title="Collapse - Affected Projects"/>
+                           </apex:outputpanel>
+                           <apex:outputText style="font-family:verdana;font-size:80%;font-weight:bold; float:left; margin:3px 0 0 0" value="Projects - {!warning.ProjectsAffected}, Units - {!warning.UnitsAffected}"/>
+                           <apex:outputpanel id="inlinetablesec" style="display:none; float:left;">
+                           <apex:dataTable border="1px" bgcolor="#FFFFE3" width="100%" cellpadding="2" id="projectsTable" value="{!warning.AffectedProjects}" var="project"  >
+                                <apex:column width="30%" style="vertical-align:top; font-family:verdana; font-size:11px;">
+                                    <a href="javascript:ChangeMapPoint('{!project.Latitude}','{!project.Longitude}')">
+                                        <apex:outputText style="font-family:verdana;" value="{!project.ProjectName}"/>
+                                    </a>
+                                </apex:column>
+                                <apex:column width="30%" style="vertical-align:top; font-family:verdana; font-size:11px;">    
+                                    <apex:outputText style="font-family:verdana;" value="{!project.AddressDetail}"/>  
+                                </apex:column>    
+                           </apex:dataTable>
+                           </apex:outputpanel>
+                       </apex:column>
+                    </apex:dataTable>
+                </apex:outputpanel> 
+            </apex:column>
+        </apex:dataTable>
+        <apex:outputText value="{!noRecordsFound}"></apex:outputText>
+        </div>
+    </td>
+    <td width="77%" valign="top">
+       <span style="font-family:verdana; color:#777777; font-size:10px; float:left; padding:0 4px 5px 3px;">
+           The following map displays a list of Enterprise projects as red dots on the map. The map also displays a Radar Echo Intensity overlay for the current weather conditions. The overlay shows the amount of precipitation in an area by assigned a series of colors to indicate heavy or light precipitation including hail, rain, and snow.
+       </span>
+       <br/>
+       <apex:iframe id="weatherMap" scrolling="true" frameborder="true" width="100%" src="/apex/WeatherMap?lat={!$CurrentPage.parameters.lat}&lon={!$CurrentPage.parameters.lon}"></apex:iframe>
+    </td>
+</tr>
+</table>
+</apex:form>
+</body>
+</apex:page>

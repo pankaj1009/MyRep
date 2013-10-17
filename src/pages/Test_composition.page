@@ -1,0 +1,25 @@
+<apex:page controller="compositionExample">
+
+<apex:form >
+<apex:image id="theImage1" url="{!URLFOR($Resource.BS,
+                  'header11.jpg')}" width="1500" height="50"/><br/>
+                  
+<apex:image id="theImage" url="{!URLFOR($Resource.Beautyshot,
+                  'header.jpg')}" width="1500" height="50"/><br/>                  
+
+<!--
+<apex:outputLabel value="Enter your name: " for="nameField"/>
+<apex:inputText id="nameField" value="{!nameField}"/>
+<br /> -->
+<apex:insert name="age" />
+<br />
+<apex:insert name="meal" />
+<br />
+<!--
+<p>That's everything, right?</p>
+<apex:commandButton action="{!save}" value="Save" id="saveButton"/><br/>
+-->
+<apex:image id="theImage2" value="{!$Resource.Footer}" width="1500" height="50"/>
+</apex:form>
+
+</apex:page>

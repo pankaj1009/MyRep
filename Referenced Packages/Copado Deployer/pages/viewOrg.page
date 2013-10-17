@@ -1,0 +1,29 @@
+<apex:page standardController="copado__Org__c" extensions="copado.EditOrg" action="{!validate}">
+	<apex:form >
+	<apex:sectionHeader title="{!$ObjectType.copado__Org__c.Label}" subtitle="{!org.Name}"/>
+		<apex:pageMessages />
+		<apex:pageBlock id="pb_createOrg"  mode="view">
+			<apex:pageblockButtons >
+                <apex:commandButton value="{!$Label.site.edit}" action="{!edit}" />
+                <apex:commandButton value="{!$Label.DELETE}" action="{!delete}" />
+            </apex:pageblockButtons>
+            <apex:pageBlockSection columns="1">
+                <apex:outputField value="{!org.Name}" />
+                <apex:outputField value="{!org.copado__Username__c}" />
+                
+                <apex:pageBlockSectionItem >
+				  <apex:outputLabel value="Password" />
+				  <apex:outputText value="{!dumypass}"/>
+				</apex:pageBlockSectionItem> 
+                
+                <apex:outputText value="{!org.copado__Token__c}" />
+                <apex:outputField value="{!org.copado__Org_Type__c}" />
+                <apex:outputField value="{!org.copado__SFDC_Org_ID__c}" />
+                <apex:outputField value="{!org.copado__Validated_Date__c}" />
+                <apex:outputField value="{!org.copado__Error__c}" rendered="{!if(not(isblank(org.copado__Error__c)),true,false)}"/>
+                
+                <apex:outputField value="{!org.copado__Disable_Validation__c}"/>
+            </apex:pageBlockSection>
+        </apex:pageBlock>
+     </apex:form>
+</apex:page>

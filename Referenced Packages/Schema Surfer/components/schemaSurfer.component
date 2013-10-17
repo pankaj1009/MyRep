@@ -1,0 +1,998 @@
+<apex:component controller="SchemaSurfer.SchemaSurferController" allowDML="true">
+
+    <apex:stylesheet value="{!URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'css/custom-theme/jquery-ui-1.8.22.custom.css')}"/>
+    <apex:stylesheet value="{!URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'css/schemasurfer.css')}"/>
+    <script src="{!URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'js/jquery-1.7.2.min.js')}"/> 
+    <script src="{!URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'js/jquery-ui-1.8.22.custom.min.js')}"/>
+    <script src="{!URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'js/jquery.tooltip.min.js')}"/>
+    <script src="{!URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'js/jquery.tablesorter.min.js')}"/>
+    <script src="{!URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'js/schemasurfer.js')}"/>
+	
+	<apex:outputPanel id="displayVars">
+		<script type="text/javascript">
+			//Set variables in the script that are stored in custom settings, no 'var' as these are already declared in schemasurferjs
+			sidebarDisplay = '{!JSENCODE(sidebarObjectDisplay)}';
+			var fieldDisplay = '{!JSENCODE(fieldDisplay)}';
+			var parentDisplay = '{!JSENCODE(parentDisplay)}';
+			var childDisplay = '{!JSENCODE(childDisplay)}';
+			var recordTypeDisplay = '{!JSENCODE(recordTypeDisplay)}';
+			var checkedURL = "{!URLFOR($Resource.SchemaSurferFiles, 'img/checkbox_checked.gif')}";
+			var notCheckedURL = "{!URLFOR($Resource.SchemaSurferFiles, 'img/checkbox_unchecked.gif')}";
+			var objectName = '{!JSENCODE(objectName)}';
+			var helpPageUrl = '{!URLFOR($Page.SchemaSurferHelp)}';
+		</script>
+	</apex:outputPanel>
+	
+	<!-- Variable names for js remoting methods -->
+	<script>
+		var getFieldFieldSetFieldsRemote = '{!$RemoteAction.SchemaSurferController.getFieldSetFields}';
+		var getPicklistDataRemote = '{!$RemoteAction.SchemaSurferController.getPicklistData}'; 
+	</script>
+	
+	<style>
+		/*Certain classes that require merge fields*/
+		.singleGridItem{
+			background-image:url("{!URLFOR($Resource.SchemaSurferFiles, 'img/compbg.gif')}");
+		}
+		.sortableTableHeaderAsc .sortDirectionIndicator{
+			background-image:url("{!URLFOR($Resource.SchemaSurferFiles, 'img/sortArrows_sprite.png')}");
+		}
+		.sortableTableHeaderDesc .sortDirectionIndicator{
+			background-image:url("{!URLFOR($Resource.SchemaSurferFiles, 'img/sortArrows_sprite.png')}");
+		}
+	</style>
+	  
+    <div id="top"></div>
+  	  
+	<div class="pageHeader">
+		<div class="titleSection">
+			<img class="headerTitleIcon" src="{!URLFOR($Resource.SchemaSurferFiles, 'img/ssLogoSmall.png')}"/>
+			<h1 class="headerTitle">Schema Surfer<!-- BETA... a.k.a. it will might break and junk.--></h1>
+		</div>
+		<div class="headerLinks">
+			<a href="http://www.envyapps.com" target="_blank"><img src="{!URLFOR($Resource.SchemaSurferFiles, 'img/logoSmall.png')}" /></a><br/>
+			<a href="{!URLFOR($Page.SchemaSurferHelp)}" id="openHelpModal">
+				<span>Help for this Page</span>
+				<span class="helpLinkIcon"><img src="{!URLFOR($Resource.SchemaSurferFiles, 'img/help_orange.png')}"/></span>
+			</a>
+		</div>
+	</div>
+	
+    <apex:form id="form">
+        <table width="100%" cellpadding="0" cellspacing="0">
+            <tr>    
+                <td width="210px">
+                    <div id="sideBar">
+                        <div id="sideBarInner">
+                            <div class="filterObject">
+                                Filter: <input type="text" id="objectFilterInput"/>
+                            </div>
+                         
+                            <div class="displayButton hidden">
+                                <apex:panelGrid columns="2">
+                                    <apex:outputText value="View:" styleClass="sidebarView"/>
+                                    <apex:selectRadio value="{!sidebarObjectDisplay}" layout="lineDirection" border="0" onclick="changeSidebarObjectDisplay(this.value);" >
+                                        <apex:selectOption itemLabel="Label" itemValue="label" />
+                                        <apex:selectOption itemLabel="Name" itemValue="name" />
+                                        <apex:actionSupport event="onchange" action="{!updateSettings}" reRender="displayVars"/>
+                                    </apex:selectRadio>
+                                </apex:panelGrid>
+                            </div>
+                            
+                            <div class="noMatches">
+                            	No matches found.
+                            </div>
+                                
+                            <div id="objects">    
+                                <apex:repeat value="{!allObjects}" var="list">
+                           	    	<apex:repeat value="{!list}" var="o">
+                           	         	<div class="sidebarObject" data-label="{!o.obj.label}" data-name="{!o.obj.Name}" data-prefix="{!o.obj.keyprefix}">
+		                                    <span>
+		                                    	<a href="" class="objectLink" data-objectName="{!o.obj.Name}">{!o.obj.Label}</a>
+		                                    </span>
+		                                    <div class="tipOuter">
+		                                        <div class="tipInner">
+		                                            <apex:panelGrid columns="2" columnClasses="tipLabel,tipValue">
+		                                                <apex:outputPanel styleClass="objectLabelTip">Object Label:&nbsp;</apex:outputPanel><apex:outputText value="{!o.obj.Label}" styleClass="objectLabelTip"/>
+		                                                <apex:outputPanel styleClass="objectNameTip">Object Name:&nbsp;</apex:outputPanel><apex:outputText value="{!o.obj.Name}" styleClass="objectNameTip"/>
+		                                                <apex:outputPanel >Key Prefix:&nbsp;</apex:outputPanel><apex:outputText value="{!IF(o.obj.keyprefix != '',o.obj.keyprefix,'Unknown')}"/>
+		                                            </apex:panelGrid>
+		                                        </div>
+		                                    </div>
+	                                    </div>
+                                	</apex:repeat>
+                                </apex:repeat>
+                            </div>
+                        </div>
+                    </div>
+                </td>
+                <td>
+                    <apex:outputPanel id="mainDetail" layout="block" styleClass="mainDetail">
+                        <apex:actionStatus id="status">
+                            <apex:facet name="start">
+                                <div id="statusInnerWrapper">
+                                    <div id="statusInner">
+                                        Retrieving Object Information...<br/><img src="{!URLFOR($Resource.SchemaSurferFiles, 'img/loading32.gif')}"/>
+                                    </div>
+                                </div>
+                                <div id="statusBackground"></div>
+                            </apex:facet>
+                        </apex:actionStatus>
+                  
+                        <div id="historySection" class="history" layout="block">
+                            <span class="historyLabel">History:</span>
+                            <apex:repeat value="{!history}" var="h">
+                                <a href="" class="objectLink" data-objectName="{!h.objectName}" data-objectLabel="{!h.objectLabel}">
+                                	<apex:outputText value="{!h.objectLabel}" rendered="{!sidebarObjectDisplay == 'label'}"/>
+                                    <apex:outputText value="{!h.objectName}" rendered="{!sidebarObjectDisplay == 'name'}"/>
+                                </a> 
+                                <apex:outputText value=" -" rendered="{!h.count != history.size}"/> 
+                            </apex:repeat>
+                        </div>
+                        
+                        <apex:pageBlock mode="maindetail" id="objectInfo">
+                            <apex:facet name="header">
+                            	<div class="pageBlockHeaderMain">
+                            		Object Detail - {!ow.obj.Label}
+                            	</div>
+                            </apex:facet>                            
+                            
+                            <apex:pageBlockSection columns="2" title="Basic Information" collapsible="false" id="basicSection">
+                                <apex:pageBlockSectionItem helpText="Object's label, which may or may not match the object name. For example, an organization String getLabel in the medical industry might change the label for Account to Patient.This label is then used in the Salesforce.com user interface.">
+                                    <apex:outputLabel value="Label"/>
+                                    <apex:outputText value="{!ow.obj.Label}"/>                                
+                                </apex:pageBlockSectionItem>
+                                <apex:pageBlockSectionItem helpText="The object's plural label, which may or may not match the object name. For example, an organization in the medical industry might change the plural label for Account to Patients. This label is then used in the Salesforce user interface.">
+                                    <apex:outputLabel value="Plural Label"/>
+                                    <apex:outputText value="{!ow.obj.LabelPlural}"/>                                
+                                </apex:pageBlockSectionItem>
+                                <apex:pageBlockSectionItem helpText="The name of the object.">
+                                    <apex:outputLabel value="API Name"/>
+                                    <apex:outputText value="{!ow.obj.NAme}"/>                                
+                                </apex:pageBlockSectionItem>
+                                <apex:pageBlockSectionItem helpText="The name of the object, similar to the getName method. However, if the object is part of the current namespace, the namespace portion of the name is omitted.">
+                                    <apex:outputLabel value="Local API Name"/>
+                                    <apex:outputText value="{!ow.obj.LocalName}"/>                                
+                                </apex:pageBlockSectionItem>
+                                <apex:pageBlockSectionItem helpText="The three-character prefix code for the object. Record IDs are prefixed with three-character codes that specify the type of the object (for example, accounts have a prefix of 001 and opportunities have a prefix of 006). The prefix for custom objects and some standard objects may be different between salesforce.com organizations. Client applications that rely on these codes can use this way of determining object type to ensure forward compatibility.">
+                                    <apex:outputLabel value="Key Prefix"/>
+                                    <apex:outputText value="{!ow.keyPrefix}"/>                                
+                                </apex:pageBlockSectionItem>
+                            </apex:pageBlockSection>
+                            
+                           <apex:pageBlockSection title="Other Properties" collapsible="false" id="propertiesSection">
+                               <apex:pageBlockSectionItem helpText="Returns true if the current user can see this field, false otherwise.">
+                                    <apex:outputLabel value="isAccessible"/>
+                                    <img src="{!IF(ow.IsAccessible,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>
+                                </apex:pageBlockSectionItem>
+                                <apex:pageBlockSectionItem helpText="Returns true if the object can be created by the current user, false otherwise.">
+                                    <apex:outputLabel value="isCreateable"/>
+                                    <img src="{!IF(ow.isCreateable,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+                                </apex:pageBlockSectionItem>
+                                <apex:pageBlockSectionItem helpText="Returns true if the object is a custom object, false if it is a standard object.">
+                                    <apex:outputLabel value="isCustom"/>
+                                    <img src="{!IF(ow.isCustom,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+                                </apex:pageBlockSectionItem>
+                                <apex:pageBlockSectionItem helpText="Returns true if the object is a custom setting, false otherwise.">
+                                    <apex:outputLabel value="isCustomSetting"/>
+                                    <img src="{!IF(ow.isCustomSetting,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+                                </apex:pageBlockSectionItem>
+                                <apex:pageBlockSectionItem helpText="Returns true if the object can be deleted by the current user, false otherwise.">
+                                    <apex:outputLabel value="isDeletable"/>
+                                    <img src="{!IF(ow.isDeletable,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+                                </apex:pageBlockSectionItem>
+                                <apex:pageBlockSectionItem helpText="Reserved for future use.">
+                                    <apex:outputLabel value="isDeprecatedAndHidden"/>
+                                    <img src="{!IF(ow.isDeprecatedAndHidden,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+                                </apex:pageBlockSectionItem>
+                                <apex:pageBlockSectionItem helpText="Returns true if Chatter feeds are enabled for the object, false otherwise.">
+                                    <apex:outputLabel value="isFeedEnabled"/>
+                                    <img src="{!IF(ow.isFeedEnabled,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+                                </apex:pageBlockSectionItem>
+                                <apex:pageBlockSectionItem helpText="Returns true if the object can be merged with other objects of its type by the current user, false otherwise. True is commonly returned for Leads, Contacts, and Accounts.">
+                                    <apex:outputLabel value="isMergeable"/>
+                                    <img src="{!IF(ow.isMergeable,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+                                </apex:pageBlockSectionItem>
+                                <apex:pageBlockSectionItem helpText="Returns true if the object can be queried by the current user, false otherwise.">
+                                    <apex:outputLabel value="isQueryable"/>
+                                    <img src="{!IF(ow.isQueryable,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+                                </apex:pageBlockSectionItem>
+                                <apex:pageBlockSectionItem helpText="Returns true if the object can be searched by the current user, false otherwise.">
+                                    <apex:outputLabel value="isSearchable"/>
+                                    <img src="{!IF(ow.isSearchable,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+                                </apex:pageBlockSectionItem>
+                                <apex:pageBlockSectionItem helpText="Returns true if the object can be undeleted by the current user, false otherwise.">
+                                    <apex:outputLabel value="isUndeletable"/>
+                                    <img src="{!IF(ow.isUndeletable,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+                                </apex:pageBlockSectionItem>
+                                <apex:pageBlockSectionItem helpText="Returns true if the object can be updated by the current user, false otherwise.">
+                                    <apex:outputLabel value="isUpdateable"/>
+                                    <img src="{!IF(ow.isUpdateable,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+                                </apex:pageBlockSectionItem> 
+                            </apex:pageBlockSection>
+                        </apex:pageBlock>
+                        
+                        <!-- FIELDS -->
+                        <apex:pageBlock title="{!ow.obj.Label} Fields" mode="edit" id="fieldBlock">
+                            <apex:facet name="header">
+                                <apex:panelGrid columns="2" columnClasses="left,right" styleClass="pageBlockHeader" style="padding: 0px;">
+                                    <apex:outputPanel styleClass="blockTitle" layout="block" >
+                                        <h2 class="mainTitle">{!ow.obj.Label} Fields</h2>
+                                    </apex:outputPanel>
+                                    <apex:outputPanel id="buttonHeader" layout="block" styleClass="buttonHeader">
+                                        <div class="gridListButton hidden">
+                                            <apex:selectRadio value="{!fieldLayout}" id="radiofield" layout="lineDirection" border="0" style="width:1px" onclick="switchFieldView(this);" >
+                                                <apex:selectOption itemLabel="Grid" itemValue="grid" />
+                                                <apex:selectOption itemLabel="List" itemValue="list" />
+                                                <apex:actionSupport event="onchange" action="{!updateSettings}" reRender="displayVars"/>
+                                            </apex:selectRadio>
+                                        </div>
+                                    </apex:outputPanel>
+                                </apex:panelGrid>
+                            </apex:facet>
+                            
+                            <div id="fieldInfoTop"><!-- used to locate top of pageblock section for scroll logic --></div>
+                            
+                            <apex:panelGrid columns="1" width="100%">
+                                <apex:panelGroup >
+                                    <div id="fieldList" class="itemList">
+                                        <div class="filter">
+                                            <div class="fieldFilterSection">
+                                            	Filter: <input type="text" id="fieldFilter"/>
+                                        	</div>
+                                        
+	                                        <apex:outputPanel rendered="{!fieldSets.size > 1}" layout="block" style="float:left;">
+		                                        <div class="fieldSetLabel">Field Set:&nbsp;</div>
+		                                        <apex:selectList size="1" styleClass="fieldSetList">
+		                                        	<apex:selectOptions value="{!fieldSets}"/>
+		                                        </apex:selectList>
+	                                        </apex:outputPanel>
+	                                        
+                                        </div>
+                                                                                
+                                        <!-- GRID -->
+                                        <div id="fieldGrid" style="display: {!IF(fieldLayout == 'grid','block','none')};">
+                                            
+                                            <div class="displayButton hidden" >
+		                                        <div class="viewLabel">View:&nbsp;</div>
+		                                        
+		                                        <apex:selectRadio style="float: left;" value="{!fieldDisplay}" layout="lineDirection" border="0" onclick="changeGridDisplay('fieldGrid',this.value);" >
+			                                        <apex:selectOption itemLabel="Label" itemValue="label" />
+			                                        <apex:selectOption itemLabel="Name" itemValue="name" />
+			                                        <apex:actionSupport event="onchange" action="{!updateSettings}" reRender="displayVars"/>
+			                                    </apex:selectRadio>
+		                                    </div>
+                                            
+                                            <div class="clearFix"/>
+                                            
+                                            <apex:repeat value="{!fields}" var="list">
+	                                            <apex:repeat value="{!list}" var="f">
+	                                                <div class="singleGridItem" data-name="{!f.fld.Name}" data-label="{!f.fld.label}" data-objectName="{!objectName}">
+	                                                    <span class="gridDisplay">{!f.fld.Label}</span>
+	                                                
+	                                                	<div class="tipOuter">
+		                                                    <div class="tipInner">
+		                                                        <apex:panelGrid columns="2" columnClasses="tipLabel,tipValue">
+		                                                            <apex:outputText value="Label:" styleClass="objectLabelTip"/><apex:outputText value="{!f.fld.Label}" styleClass="objectLabelTip"/>
+		                                                            <apex:outputText value="Name:" styleClass="objectNameTip"/><apex:outputText value="{!f.fld.Name}" styleClass="objectNameTip"/>
+		                                                            <apex:outputText value="Type:"/><apex:outputText value="{!f.fld.Type}"/>
+		                                                        </apex:panelGrid>
+		                                                    </div>
+		                                                </div>        
+	                                                </div>
+	                                            </apex:repeat>
+                                            </apex:repeat>
+                                        </div>
+                                        
+                                        <div class="clearFix"/>
+
+                                        <!-- TABLE -->
+                                        <div id="fieldTableSection" style="display: {!IF(fieldLayout == 'list','block','none')};" >
+                                            <table class="list tablesorter" id="fieldTable" border="0" cellpadding="0" cellspacing="0" style="border-bottom-width: 0px;">
+												<thead class="rich-table-thead">
+													<tr class="headerRow ">
+														<th class="headerRow" scope="col" colspan="1">
+															<div>
+																<div class="tableHeaderLabel">Field Label</div>
+																<div class="sortDirectionIndicator"></div>
+															</div>
+														</th>
+														<th class="headerRow" scope="col" colspan="1">
+															<div>
+																<div class="tableHeaderLabel">Field Name</div>
+																<div class="sortDirectionIndicator"></div>
+															</div>
+														</th>
+														<th class="headerRow" scope="col" colspan="1">
+															<div>
+																<div class="tableHeaderLabel">Data Type</div>
+																<div class="sortDirectionIndicator"></div>
+															</div>
+														</th>
+													</tr>
+												</thead>
+												<tbody>
+													<apex:repeat value="{!fields}" var="list">
+	                                        			<apex:repeat value="{!list}" var="f">
+															<tr class="dataRow">
+																<td class="dataCell" colspan="1">
+																	<a class="singleListField" data-name="{!f.fld.Name}" data-objectname="{!objectName}" href="#">{!f.fld.Label}</a>
+																	<span class="labelFilterValue">{!f.fld.Label}</span> <!-- Hidden fields are used for filtering -->
+																</td>
+																<td class="dataCell" colspan="1">
+																	<a class="singleListField" data-name="{!f.fld.Name}" data-objectname="{!objectName}" href="#">{!f.fld.Name}</a>
+																	<span class="nameFilterValue">{!f.fld.Name}</span> <!-- Hidden fields are used for filtering -->
+																</td>
+																<td class="dataCell" colspan="1">
+																	{!f.fld.Type}
+																</td>
+															</tr>
+														</apex:repeat>
+													</apex:repeat>
+												</tbody>
+                                            </table>
+                                        </div>
+                                        
+                                        <div class="noMatches">
+                                        	No matches found.
+                                        </div>
+                                    </div>
+    
+                                    <!--Field drill down detail-->
+                                    <div id="fieldDetail" style="display:none;">
+                                        <input id="fieldListBackButton" type="button" value="Back to Field List" class="btn"/>
+                                        
+                                        <apex:repeat value="{!fields}" var="list">
+	                                        <apex:repeat value="{!list}" var="f">
+	                                            <div class="fieldDetailWrapper" data-fieldName="{!f.fld.NAme}" style="display: none;">
+													
+	                                                <apex:pageBlockSection title="Basic Information - {!f.fld.Name}" collapsible="false" columns="2" >
+	                                                    <apex:pageBlockSectionItem helpText="For variable-length fields (including binary fields), returns the maximum size of the field, in bytes.">
+	                                                        <apex:outputLabel value="Byte Length"/>
+	                                                        <apex:outputText value="{!f.fld.byteLength}"/>                                
+	                                                    </apex:pageBlockSectionItem>
+	                                                    
+	                                                    <apex:pageBlockSectionItem helpText="Returns the formula specified for this field.">
+	                                                        <apex:outputLabel value="Calculated Formula"/>
+	                                                        <apex:outputText value="{!f.fld.calculatedFormula}"/>                                
+	                                                    </apex:pageBlockSectionItem>
+	                                                    
+	                                                    <apex:pageBlockSectionItem helpText="Returns name of the controlling field if this is a depending picklist field.">
+	                                                        <apex:outputLabel value="Controlling Field"/>
+	                                                        <apex:outputText value="{!f.controllerField.Name}"/>                                
+	                                                    </apex:pageBlockSectionItem>
+	                                                    
+	                                                    <apex:pageBlockSectionItem helpText="Returns the default value for this field.">
+	                                                        <apex:outputLabel value="Default Value"/>
+	                                                        <apex:outputText value="{!f.fld.defaultValue}"/>                                
+	                                                    </apex:pageBlockSectionItem>
+	                                                    
+	                                                    <apex:pageBlockSectionItem helpText="Returns the default value specified for this field if a formula is not used.">
+	                                                        <apex:outputLabel value="Default Value Formula"/>
+	                                                        <apex:outputText value="{!f.fld.defaultValueFormula}"/>                                
+	                                                    </apex:pageBlockSectionItem>
+	                                                    
+	                                                    <apex:pageBlockSectionItem helpText="Returns the maximum number of digits specified for the field. This method is only valid with Integer fields.">
+	                                                        <apex:outputLabel value="Digits"/>
+	                                                        <apex:outputText value="{!f.fld.digits}"/>                                
+	                                                    </apex:pageBlockSectionItem>
+	                                                    
+	                                                    <apex:pageBlockSectionItem helpText="Returns the content of the field-level help. For more information, see “Defining Field-Level Help” in the Salesforce online help.">
+	                                                        <apex:outputLabel value="Inline Help Text"/>
+	                                                        <apex:outputText value="{!f.fld.inlineHelpText}"/>                                
+	                                                    </apex:pageBlockSectionItem>
+	                                                    
+	                                                    <apex:pageBlockSectionItem helpText="Returns the content of the field-level help.">
+	                                                        <apex:outputLabel value="Label"/>
+	                                                        <apex:outputText value="{!f.fld.label}"/>                                
+	                                                    </apex:pageBlockSectionItem>
+	                                                    
+	                                                    <apex:pageBlockSectionItem helpText="For string fields, returns the maximum size of the field in Unicode characters (not bytes).">
+	                                                        <apex:outputLabel value="Length"/>
+	                                                        <apex:outputText value="{!f.fld.length}"/>                                
+	                                                    </apex:pageBlockSectionItem>
+	                                                    
+	                                                    <apex:pageBlockSectionItem helpText="Returns the name of the field, similar to the getName method. However, if the field is part of the current namespace, the namespace portion of the name is omitted.">
+	                                                        <apex:outputLabel value="Local Name"/>
+	                                                        <apex:outputText value="{!f.fld.localNAme}"/>                                
+	                                                    </apex:pageBlockSectionItem>
+	                                                    
+	                                                    <apex:pageBlockSectionItem helpText="Returns the API field name.">
+	                                                        <apex:outputLabel value="Name"/>
+	                                                        <apex:outputText value="{!f.fld.Name}"/>                                
+	                                                    </apex:pageBlockSectionItem>
+	                                                    
+	                                                    <apex:pageBlockSectionItem helpText="For fields of type Double, returns the maximum number of digits that can be stored, including all numbers to the left and to the right of the decimal point (but excluding the decimal point character)">
+	                                                        <apex:outputLabel value="Precision"/>
+	                                                        <apex:outputText value="{!f.fld.precision}"/>                                
+	                                                    </apex:pageBlockSectionItem>
+	                                                    
+	                                                    <apex:pageBlockSectionItem helpText="Returns the name of the relationship. For more information about relationships and relationship names, see Understanding Relationship Names in the Web Services API Developer's Guide.">
+	                                                        <apex:outputLabel value="Relationship Name"/>
+	                                                        <apex:outputText value="{!f.fld.relationshipName}"/>                                
+	                                                    </apex:pageBlockSectionItem>
+	                                                    
+	                                                    <apex:pageBlockSectionItem helpText="Returns 1 if the field is a child, 0 otherwise. For more information about relationships and relationship names, see Understanding Relationship Names in the Web Services API Developer's Guide.">
+	                                                        <apex:outputLabel value="Relationship Order"/>
+	                                                        <apex:outputText value="{!f.fld.relationshipOrder}"/>                                
+	                                                    </apex:pageBlockSectionItem>
+	                                                    
+	                                                    <apex:pageBlockSectionItem helpText="For fields of type Double, returns the number of digits to the right of the decimal point. Any extra digits to the right of the decimal point are truncated. This method returns a fault response if the number has too many digits to the left of the decimal point.">
+	                                                        <apex:outputLabel value="Scale"/>
+	                                                        <apex:outputText value="{!f.fld.scale}"/>                                
+	                                                    </apex:pageBlockSectionItem>
+	                                                    
+	                                                    <apex:pageBlockSectionItem helpText="Returns one of the SoapType enum values, depending on the type of field.">
+	                                                        <apex:outputLabel value="SOAP Type"/>
+	                                                        <apex:outputText value="{!f.fld.SOAPType}"/>                                
+	                                                    </apex:pageBlockSectionItem>
+	                                                    
+	                                                    <apex:pageBlockSectionItem helpText="Returns one of the DisplayType enum values,depending on the type of field.">
+	                                                        <apex:outputLabel value="Type"/>
+	                                                        <apex:outputText value="{!f.fld.Type}"/>                                
+	                                                    </apex:pageBlockSectionItem>
+	                                               	</apex:pageBlockSection>
+	                                               	
+	                                               	<apex:pageBlockSection title="Picklist Values" collapsible="false" columns="1" rendered="{!OR(f.fld.Type == 'PICKLIST', f.fld.Type == 'MULTIPICKLIST')}">
+	                                                    <table id="picklistTable{!f.fld.Name}" cellpadding="0" cellspacing="0" width="100%" class="list">
+	                                                    	<thead>
+	                                                    		<tr class="headerRow">
+	                                                    			<th class="headerRow">Label</th>
+	                                                    			<th class="headerRow">Value</th>
+	                                                    			<th class="headerRow">isActive</th>
+	                                                    			<th class="headerRow">isDefaultValue</th>
+	                                                    		</tr>
+	                                                    	</thead>
+	                                                    	<tbody>
+	                                                    		<!-- This table is populated with JS remoting call after field detail section is shown -->
+	                                                    	</tbody>                                                    
+	                                                    </table>
+	                                                    <div class="picklistSpinner">
+	                                                    	<img src="{!URLFOR($Resource.SchemaSurferFiles, 'img/loading32.gif')}"/>
+	                                                    </div>
+	                                                </apex:pageBlockSection>
+	                                                
+	                                                <apex:pageBlockSection title="Referenced Objects" collapsible="false" columns="1" rendered="{!f.referenceObjects.size > 0}">
+	                                                    <apex:pageBlockTable value="{!f.referenceObjects}" var="o" styleClass="tablesorter">
+															<apex:column >
+			                                                    <apex:facet name="header">
+			                                                    	<div class="tableHeaderLabel">Object Label</div>
+			                                                    	<div class="sortDirectionIndicator"></div>
+			                                                    </apex:facet>
+			                                                    <a href="" class="objectLink" data-objectName="{!o.Name}">{!o.Label}</a>
+			                                                </apex:column>
+			                                                <apex:column > 
+			                                                    <a href="" class="objectLink" data-objectName="{!o.Name}">{!o.Name}</a>
+			                                                    <apex:facet name="header">
+			                                                    	<div class="tableHeaderLabel">Object Name</div>
+			                                                    	<div class="sortDirectionIndicator"></div>
+			                                                    </apex:facet>
+			                                                </apex:column>
+	                                                    </apex:pageBlockTable>
+	                                                </apex:pageBlockSection>
+	                                               	
+	                                               	<apex:pageBlockSection title="Other Properties" collapsible="false" columns="2">
+	                                                  	<apex:pageBlockSectionItem helpText="Returns true if the current user can see this field, false otherwise" >
+	                                                       <apex:outputLabel value="isAccessible"/>
+	                                                       <img src="{!IF(f.isAccessible,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem>  
+	                                                   
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if the field is an Auto Number field, false otherwise. Analogous to a SQL IDENTITY type, Auto Number fields are read-only, non-createable text fields with a maximum length of 30 characters. Auto Number fields are used to provide a unique ID that is independent of the internal object ID (such as a purchase order number or invoice number). Auto Number fields are configured entirely in the Salesforce user interface.">
+	                                                       <apex:outputLabel value="isAutoNumber"/>
+	                                                       <img src="{!IF(f.isAutoNumber,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem>  
+	                                                   
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if the field is a custom formula field, false otherwise. Note that custom formula fields are always read-only.">
+	                                                       <apex:outputLabel value="isCalculated"/>
+	                                                       <img src="{!IF(f.isCalculated,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem>  
+	                                                   
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if the child object is deleted when the parent object is deleted, false otherwise.">
+	                                                       <apex:outputLabel value="isCascadeDelete"/>
+	                                                       <img src="{!IF(f.isCascadeDelete,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem> 
+	                                                   
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if the field is case sensitive, false otherwise." >
+	                                                       <apex:outputLabel value="isCaseSensitive"/>
+	                                                       <img src="{!IF(f.isCaseSensitive,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem>  
+	                                                   
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if the object can be created by the current user, false otherwise." >
+	                                                       <apex:outputLabel value="isCreateable"/>
+	                                                       <img src="{!IF(f.isCreateable,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem>  
+	                                                   
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if the object is a custom object, false if it is a standard object">
+	                                                       <apex:outputLabel value="isCustom"/>
+	                                                       <img src="{!IF(f.isCustom,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem>  
+	                                                   
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if the field receives a default value when created, false otherwise. If true, Salesforce implicitly assigns a value for this field when the object is created, even if a value for this field is not passed in on the create call. For example, in the Opportunity object, the Probability field has this attribute because its value is derived from the Stage field. Similarly, the Owner has this attribute on most objects because its value is derived from the current user (if the Owner field is not specified).">
+	                                                       <apex:outputLabel value="isDefaultedOnCreate"/>
+	                                                       <img src="{!IF(f.isDefaultedOnCreate,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem>  
+	                                                   
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if the picklist is a dependent picklist, false otherwise">
+	                                                       <apex:outputLabel value="isDependentPicklist"/>
+	                                                       <img src="{!IF(f.isDependentPicklist,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem>  
+	 
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if the field is used as an external ID, false otherwise">
+	                                                       <apex:outputLabel value="isExternalID"/>
+	                                                       <img src="{!IF(f.isExternalID,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem>  
+	                                                   
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if the field can be used as part of the filter criteria of a WHERE statement, false otherwise">
+	                                                       <apex:outputLabel value="isFilterable"/>
+	                                                       <img src="{!IF(f.isFilterable,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem>  
+	                                                   
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if the field can be included in the GROUP BY clause of a SOQL query, false otherwise. This method is only available for Apex classes and triggers saved using API version 18.0 and higher.">
+	                                                       <apex:outputLabel value="isGroupable"/>
+	                                                       <img src="{!IF(f.isGroupable,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem>  
+	                                                   
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if the field has been formatted for HTML and should be encoded for display in HTML, false otherwise. One example of a field that returns true for this method is a hyperlink custom formula field. Another example is a custom formula field that has an IMAGE text function.">
+	                                                       <apex:outputLabel value="isHtmlFormatted"/>
+	                                                       <img src="{!IF(f.isHtmlFormatted,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem>  
+	                                                   
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if the field can be used to specify a record in an upsert method, false otherwise">
+	                                                       <apex:outputLabel value="isIdLookup"/>
+	                                                       <img src="{!IF(f.isIdLookup,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem>
+	                                                   
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if the field is a name field, false otherwise. This method is used to identify the name field for standard objects (such as AccountName for an Account object) and custom objects. Objects can only have one name field, except where the FirstName and LastName fields are used instead (such as on the Contact object). If a compound name is present, for example, the Name field on a person account, isNameField is set to true for that record.">
+	                                                       <apex:outputLabel value="isNameField"/>
+	                                                       <img src="{!IF(f.isNameField,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem> 
+	                                                   
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if the field can have multiple types of objects as parents. For example, a task can have both the Contact/Lead ID (WhoId) field and the Opportunity/Account ID (WhatId) field return true for this method. because either of those objects can be the parent of a particular task record. This method returns false otherwise.">
+	                                                       <apex:outputLabel value="isNamePointing"/>
+	                                                       <img src="{!IF(f.isNamePointing,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem> 
+	                                                   
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if the field is nillable, false otherwise. A nillable field can have empty content. A non-nillable field must have a value for the object to be created or saved.">
+	                                                       <apex:outputLabel value="isNillable"/>
+	                                                       <img src="{!IF(f.isNillable,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem> 
+	                                                    
+	                                               		<apex:pageBlockSectionItem helpText="Returns true if field permissions can be specified for the field, false otherwise.">
+	                                                       <apex:outputLabel value="isPermissionable"/>
+	                                                       <img src="{!IF(f.isPermissionable,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem> 
+	                                                    
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if the parent object can't be deleted because it is referenced by a child object, false otherwise.">
+	                                                       <apex:outputLabel value="isRestrictedDelete"/>
+	                                                       <img src="{!IF(f.isRestrictedDelete,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem> 
+	                                                   
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if the field is a restricted picklist, false otherwise">
+	                                                       <apex:outputLabel value="isRestrictedPicklist"/>
+	                                                       <img id="isRestrictedPicklist{!f.fld.Name}" src="{!IF(f.isRestrictedPicklist,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem> 
+	                                                   
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if a query can sort on the field, false otherwise">
+	                                                       <apex:outputLabel value="isSortable"/>
+	                                                       <img src="{!IF(f.isSortable,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem> 
+	                                                   
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if the value for the field must be unique, false otherwise">
+	                                                       <apex:outputLabel value="isUnique"/>
+	                                                       <img src="{!IF(f.isUnique,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem>    
+	                                                   
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if the field can be edited by the current user, false otherwise">
+	                                                       <apex:outputLabel value="isUpdateable"/>
+	                                                       <img src="{!IF(f.isUpdateable,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem>  
+	                                                   
+	                                                   <apex:pageBlockSectionItem helpText="Returns true if writing to the detail object requires read sharing instead of read/write sharing of the parent.">
+	                                                       <apex:outputLabel value="isWriteRequiresMasterRead"/>
+	                                                       <img src="{!IF(f.isWriteRequiresMasterRead,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                   </apex:pageBlockSectionItem>  
+	                                               </apex:pageBlockSection>
+	                                            </div>
+	                                        </apex:repeat>
+                                        </apex:repeat>
+                                    </div>
+                                </apex:panelGroup>
+                            </apex:panelGrid>
+                        </apex:pageBlock>
+                        
+                        <!-- PARENT RELATIONSHIPS -->
+                        <apex:pageBlock id="parentBlock" title="{!ow.obj.Label} Parent Relationships" mode="edit">
+                            <apex:facet name="header">
+                                <apex:panelGrid columns="2" columnClasses="left,right" styleClass="pageBlockHeader" style="padding: 0px;">
+                                    <apex:outputPanel styleClass="blockTitle" layout="block" >
+                                        <h2 class="mainTitle">{!ow.obj.Label} Parent Relationships</h2>
+                                    </apex:outputPanel>
+                                    <apex:outputPanel id="buttonHeader" layout="block" styleClass="buttonHeader">
+                                        <div class="gridListButton hidden" rendered="{!AND(NOT(ISNULL(parentRelationships)),parentRelationships.size > 0)}">
+                                            <apex:selectRadio value="{!parentLayout}" id="radiofield" layout="lineDirection" border="0" style="width:1px" onclick="switchParentView(this);" >
+                                                <apex:selectOption itemLabel="Grid" itemValue="grid" />
+                                                <apex:selectOption itemLabel="List" itemValue="list" />
+                                                <apex:actionSupport event="onchange" action="{!updateSettings}" reRender="displayVars"/>
+                                            </apex:selectRadio>
+                                        </div>
+                                    </apex:outputPanel>
+                                </apex:panelGrid>
+                            </apex:facet>
+                            
+                            <apex:panelGrid columns="1" width="100%">
+                                <apex:panelGroup >
+                                    <apex:outputPanel layout="block" styleClass="noRecordsFound" rendered="{!AND(NOT(ISNULL(parentRelationships)),parentRelationships.size == 0)}">
+                                        There are no parent relationships for this object.
+                                    </apex:outputPanel>
+                            
+                                    <div class="itemList">
+                                        <apex:outputPanel rendered="{!AND(NOT(ISNULL(parentRelationships)),parentRelationships.size > 0)}">
+                                            <div class="filter">
+                                                Filter: <input type="text" id="parentFilter"/>
+                                            </div>
+                                        </apex:outputPanel>
+                                        
+                                        <!-- GRID -->
+                                        <div id="parentGrid" style="display: {!IF(parentLayout == 'grid','block','none')};">
+                                            <apex:outputPanel styleClass="displayButton hidden" rendered="{!AND(NOT(ISNULL(parentRelationships)),parentRelationships.size > 0)}">
+		                                        <div class="viewLabel">View:&nbsp;</div>
+		                                        
+		                                        <apex:selectRadio style="float: left;" value="{!parentDisplay}" layout="lineDirection" border="0" onclick="changeGridDisplay('parentGrid',this.value);" >
+			                                        <apex:selectOption itemLabel="Label" itemValue="label" />
+			                                        <apex:selectOption itemLabel="Name" itemValue="name" />
+			                                        <apex:actionSupport event="onchange" action="{!updateSettings}" reRender="displayVars"/>
+			                                    </apex:selectRadio>
+		                                    </apex:outputPanel>
+		                                    
+		                                    <div class="clearFix"/>
+                                            
+                                            <apex:repeat value="{!parentRelationships}" var="p">
+                                                <div class="singleGridItem" data-name="{!p.obj.Name}" data-label="{!p.obj.label}">
+                                                    <span class="gridDisplay">{!p.obj.Label}</span>
+                                                
+	                                                <div class="tipOuter">
+	                                                    <div class="tipInner">
+	                                                        <apex:panelGrid columns="2" columnClasses="tipLabel,tipValue">
+	                                                            <apex:outputText value="Object Label:" styleClass="objectLabelTip"/><apex:outputText value="{!p.obj.Label}" styleClass="objectLabelTip"/>
+	                                                            <apex:outputText value="Object Name:" styleClass="objectNameTip"/><apex:outputText value="{!p.obj.Name}" styleClass="objectNameTip"/>
+	                                                            <apex:outputText value="Field Label:"/><apex:outputText value="{!p.fld.fld.Label}"/>
+	                                                            <apex:outputText value="Field Name:"/><apex:outputText value="{!p.fld.fld.Name}"/>
+	                                                          	<apex:outputText value="Relationship Name:"/><apex:outputText value="{!p.fld.fld.RelationshipName}"/>
+	                                                            
+	                                                        </apex:panelGrid>
+	                                                    </div>
+	                                                </div>
+                                                </div>         
+                                            </apex:repeat>
+                                        </div>
+                                        
+                                        <div class="clearFix"/>
+        
+                                        <!-- TABLE -->
+                                        <div id="parentTableSection" style="display: {!IF(parentLayout == 'list','block','none')};" >
+                                            <apex:pageBlockTable id="parentTable" value="{!parentRelationships}" var="p" rendered="{!AND(NOT(ISNULL(parentRelationships)),parentRelationships.size > 0)}" styleClass="tablesorter">
+                                                <apex:column >
+                                                    <apex:facet name="header">
+                                                    	<div class="tableHeaderLabel">Object Label</div>
+                                                    	<div class="sortDirectionIndicator"></div>
+                                                    </apex:facet>
+                                                    <a href="" class="objectLink" data-objectName="{!p.obj.Name}">{!p.obj.Label}</a>
+                                                    <!-- Hidden fields are used for filtering -->
+                                                    <apex:outputPanel id="label" styleClass="labelFilterValue">{!p.obj.Label}</apex:outputPanel>
+                                                </apex:column>
+                                                <apex:column >
+                                                    <apex:facet name="header">
+                                                    	<div class="tableHeaderLabel">Object Name</div>
+                                                    	<div class="sortDirectionIndicator"></div>
+                                                    </apex:facet>
+                                                    <a href="" class="objectLink" data-objectName="{!p.obj.Name}">{!p.obj.Name}</a>
+                                                    <apex:outputPanel id="name" styleClass="nameFilterValue">{!p.obj.Name}</apex:outputPanel>
+                                                </apex:column>
+                                                <apex:column value="{!p.fld.fld.Label}">
+                                                	<apex:facet name="header">
+                                                    	<div class="tableHeaderLabel">Field Label</div>
+                                                    	<div class="sortDirectionIndicator"></div>
+                                                    </apex:facet>
+                                                </apex:column>
+                                                <apex:column value="{!p.fld.fld.Name}">
+                                                	<apex:facet name="header">
+                                                    	<div class="tableHeaderLabel">Field Name</div>
+                                                    	<div class="sortDirectionIndicator"></div>
+                                                    </apex:facet>
+                                                </apex:column>
+                                                <apex:column value="{!p.fld.fld.RelationshipName}">
+                                                	<apex:facet name="header">
+                                                    	<div class="tableHeaderLabel">Relationship Name</div>
+                                                    	<div class="sortDirectionIndicator"></div>
+                                                    </apex:facet>
+                                                </apex:column>
+                                            </apex:pageBlockTable>    
+                                        </div>
+                                        
+                                        <div class="noMatches">
+                                        	No matches found.
+                                        </div>
+                                    </div>
+                                </apex:panelGroup>
+                            </apex:panelGrid>
+                        </apex:pageBlock>
+                        
+                        <!-- CHILD RELATIONSHIPS -->
+                        <apex:pageBlock id="childBlock" title="{!ow.obj.Label} Child Relationships" mode="edit">
+                            <apex:facet name="header">
+                                <apex:panelGrid columns="2" columnClasses="left,right" styleClass="pageBlockHeader" style="padding: 0px;">
+                                    <apex:outputPanel styleClass="blockTitle" layout="block" >
+                                        <h2 class="mainTitle">{!ow.obj.Label} Child Relationships</h2>
+                                    </apex:outputPanel>
+                                    <apex:outputPanel id="buttonHeader" layout="block" styleClass="buttonHeader">
+                                        <div class="gridListButton hidden">
+                                            <apex:selectRadio value="{!childLayout}" id="radiofield" layout="lineDirection" border="0" style="width:1px" onclick="switchChildView(this);" >
+                                                <apex:selectOption itemLabel="Grid" itemValue="grid" />
+                                                <apex:selectOption itemLabel="List" itemValue="list" />
+                                                <apex:actionSupport event="onchange" action="{!updateSettings}" reRender="displayVars"/>
+                                            </apex:selectRadio>
+                                        </div>
+                                    </apex:outputPanel>
+                                </apex:panelGrid>
+                            </apex:facet>
+                            
+                            <apex:pageMessage title="User object note." summary="Created By, Last Modified By, and Owner child relationships are excluded form this list as nearly every object has these types of relationships." severity="info" strength="1" rendered="{!ow.obj.Name = 'User'}"/>
+                            
+                            <apex:panelGrid columns="1" width="100%">
+                                <apex:panelGroup >
+                                    <apex:outputPanel layout="block" styleClass="noRecordsFound" rendered="{!AND(NOT(ISNULL(childRelationships)),childRelationships.size == 0)}">
+                                        There are no child relationships for this object.
+                                    </apex:outputPanel>
+                            
+                                    <div class="itemList">
+                                        <apex:outputPanel rendered="{!AND(NOT(ISNULL(childRelationships)),childRelationships.size > 0)}">
+                                            <div class="filter">
+                                                Filter: <input type="text" id="childFilter"/>
+                                            </div>
+                                        </apex:outputPanel>
+                                        
+                                        <!-- GRID -->
+                                        <div id="childGrid" style="display: {!IF(childLayout == 'grid','block','none')};">
+                                            <apex:outputPanel styleClass="displayButton hidden" layout="block" rendered="{!AND(NOT(ISNULL(childRelationships)),childRelationships.size > 0)}">
+		                                        <div class="viewLabel">View:&nbsp;</div>
+		                                        
+		                                        <apex:selectRadio style="float: left;" value="{!childDisplay}" layout="lineDirection" border="0" onclick="changeGridDisplay('childGrid',this.value);" >
+			                                        <apex:selectOption itemLabel="Label" itemValue="label" />
+			                                        <apex:selectOption itemLabel="Name" itemValue="name" />
+			                                        <apex:actionSupport event="onchange" action="{!updateSettings}" reRender="displayVars"/>
+			                                    </apex:selectRadio>
+		                                    </apex:outputPanel>
+	                                        
+	                                        <div class="clearFix"/>
+                                            
+                                            <apex:repeat value="{!childRelationships}" var="c">
+                                                <div class="singleGridItem" data-name="{!c.obj.Name}" data-label="{!c.obj.Label}">
+                                                    <span class="gridDisplay">{!c.obj.Label}</span>
+                                                
+	                                                <div class="tipOuter">
+	                                                    <div class="tipInner">
+	                                                        <apex:panelGrid columns="2" columnClasses="tipLabel,tipValue">
+	                                                            <apex:outputText value="Object Label:" styleClass="objectLabelTip"/><apex:outputText value="{!c.obj.Label}" styleClass="objectLabelTip"/>
+	                                                            <apex:outputText value="Object Name:" styleClass="objectNameTip"/><apex:outputText value="{!c.obj.Name}" styleClass="objectNameTip"/>
+	                                                            <apex:outputText value="Field Label:"/><apex:outputText value="{!c.field.Label}"/>
+	                                                            <apex:outputText value="Field Name:"/><apex:outputText value="{!c.field.Name}"/>
+	                                                            <apex:outputText value="Relationship Name:"/><apex:outputText value="{!c.field.RelationshipName}"/>
+	                                                            <apex:outputText value="Cascade Delete:"/><img src="{!IF(c.isCascadeDelete,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                            <apex:outputText value="Restricted Delete:"/><img src="{!IF(c.isRestrictedDelete,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                        </apex:panelGrid>
+	                                                    </div>
+	                                                </div>   
+                                                </div>      
+                                            </apex:repeat>
+                                        </div>
+                                        
+                                        <div class="clearFix"/>
+        
+                                        <!-- TABLE -->
+                                        <div id="childTableSection" style="display: {!IF(childLayout == 'list','block','none')};">
+                                            <apex:pageBlockTable id="childTable" value="{!childRelationships}" var="c" rendered="{!AND(NOT(ISNULL(childRelationships)),childRelationships.size > 0)}" styleClass="tablesorter">
+                                                <apex:column >
+                                                    <apex:facet name="header">
+                                                    	<div class="tableHeaderLabel">Object Label</div>
+                                                    	<div class="sortDirectionIndicator"></div>
+                                                    </apex:facet>
+                                                    <a href="" class="objectLink" data-objectName="{!c.obj.Name}">{!c.obj.Label}</a>
+                                                    <!-- Hidden fields are used for filtering -->
+                                                    <apex:outputPanel id="label" styleClass="labelFilterValue">{!c.obj.Label}</apex:outputPanel>
+                                                </apex:column>
+                                                <apex:column > 
+                                                    <apex:facet name="header">
+                                                    	<div class="tableHeaderLabel">Object Name</div>
+                                                    	<div class="sortDirectionIndicator"></div>
+                                                    </apex:facet>
+                                                    <a href="" class="objectLink" data-objectName="{!c.obj.Name}">{!c.obj.Name}</a>
+                                                    <apex:outputPanel id="name" styleClass="nameFilterValue">{!c.obj.Name}</apex:outputPanel>
+                                                </apex:column>
+                                                <apex:column value="{!c.field.Label}">
+                                                	<apex:facet name="header">
+                                                    	<div class="tableHeaderLabel">Field Label</div>
+                                                    	<div class="sortDirectionIndicator"></div>
+                                                    </apex:facet>
+                                                </apex:column>
+                                                <apex:column value="{!c.field.Name}">
+                                                	<apex:facet name="header">
+                                                    	<div class="tableHeaderLabel">Field Name</div>
+                                                    	<div class="sortDirectionIndicator"></div>
+                                                    </apex:facet>
+                                                </apex:column>
+                                                <apex:column value="{!c.field.RelationshipName}">
+                                                	<apex:facet name="header">
+                                                    	<div class="tableHeaderLabel">Relationship Name</div>
+                                                    	<div class="sortDirectionIndicator"></div>
+                                                    </apex:facet>
+                                                </apex:column>
+                                                <apex:column >
+                                                    <apex:facet name="header">
+                                                    	<div class="tableHeaderLabel">Cascade Delete</div>
+                                                    	<div class="sortDirectionIndicator"></div>
+                                                    </apex:facet>
+                                                    <img src="{!IF(c.isCascadeDelete,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+                                                	<!-- For table sorting -->
+                                                	<span class="hidden">{!IF(c.isCascadeDelete,"1","0")}</span>                                
+                                                </apex:column> 
+                                                <apex:column >
+                                                    <apex:facet name="header">
+                                                    	<div class="tableHeaderLabel">Restricted Delete</div>
+                                                    	<div class="sortDirectionIndicator"></div>
+                                                    </apex:facet>
+                                                    <img src="{!IF(c.isRestrictedDelete,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+                                                	<!-- For table sorting -->
+                                                	<span class="hidden">{!IF(c.isRestrictedDelete,"1","0")}</span>       
+                                                </apex:column> 
+                                            </apex:pageBlockTable>    
+                                        </div>
+                                        
+                                        <div class="noMatches">
+                                        	No matches found.
+                                        </div>
+                                    </div>
+                                </apex:panelGroup>
+                            </apex:panelGrid>
+                        </apex:pageBlock>
+                        
+                        <!-- RECORD TYPES -->
+                        <apex:pageBlock id="recordTypeBlock" title="{!ow.obj.Label} Record Types" mode="edit">
+                            <apex:facet name="header">
+                                <apex:panelGrid columns="2" columnClasses="left,right" styleClass="pageBlockHeader" style="padding: 0px;">
+                                    <apex:outputPanel styleClass="blockTitle" layout="block" >
+                                        <h2 class="mainTitle">{!ow.obj.Label} Record Types</h2>
+                                    </apex:outputPanel>
+                                    <apex:outputPanel id="buttonHeader" layout="block" styleClass="buttonHeader">
+                                        <div class="gridListButton hidden">
+                                            <apex:selectRadio value="{!recordTypeLayout}" id="radiofield" layout="lineDirection" border="0" style="width:1px" onclick="switchRecordTypeView(this);" >
+                                                <apex:selectOption itemLabel="Grid" itemValue="grid" />
+                                                <apex:selectOption itemLabel="List" itemValue="list" />
+                                                <apex:actionSupport event="onchange" action="{!updateSettings}" reRender="displayVars"/>
+                                            </apex:selectRadio>
+                                        </div>
+                                    </apex:outputPanel>
+                                </apex:panelGrid>
+                            </apex:facet>
+                            
+                            <apex:panelGrid columns="1" width="100%">
+                                <apex:panelGroup >
+                                    <apex:outputPanel layout="block" styleClass="noRecordsFound" rendered="{!AND(NOT(ISNULL(recordTypes)),recordTypes.size == 0)}">
+                                        There are no record types for this object.
+                                    </apex:outputPanel>
+                            
+                                    <div class="itemList">
+                                        <apex:outputPanel rendered="{!AND(NOT(ISNULL(recordTypes)),recordTypes.size > 0)}">
+                                            <div class="filter">
+                                                Filter: <input type="text" id="recordTypeFilter"/>
+                                            </div>                                           
+                                        </apex:outputPanel>
+                                        
+                                        <!-- GRID -->
+                                        <div id="recordTypeGrid" style="display: {!IF(recordTypeLayout == 'grid','block','none')};">
+                                            <apex:outputPanel styleClass="displayButton hidden" layout="block" rendered="{!AND(NOT(ISNULL(recordTypes)),recordTypes.size > 0)}">
+		                                        <div class="viewLabel">View:&nbsp;</div>
+		                                        
+		                                        <apex:selectRadio style="float: left;" value="{!recordTypeDisplay}" layout="lineDirection" border="0" onclick="changeGridDisplay('recordTypeGrid',this.value);" >
+			                                        <apex:selectOption itemLabel="Label" itemValue="label" />
+			                                        <apex:selectOption itemLabel="Name" itemValue="name" />
+			                                        <apex:actionSupport event="onchange" action="{!updateSettings}" reRender="displayVars"/>
+			                                    </apex:selectRadio>
+		                                    </apex:outputPanel>
+	                                        
+	                                        <div class="clearFix"/>
+                                            
+                                            <apex:repeat value="{!recordTypes}" var="r">
+                                                <div class="singleGridItem" data-label="{!r.rt.Name}" data-name="{!r.developerName}">
+                                                    <span class="gridDisplay">{!r.rt.Name}</span>
+                                                
+	                                                <div class="tipOuter">
+	                                                    <div class="tipInner">
+	                                                        <apex:panelGrid columns="2" columnClasses="tipLabel,tipValue">
+	                                                            <apex:outputText value="Record Type Id:"/><apex:outputText value="{!r.Id}"/>
+	                                                            <apex:outputText value="Name:" styleClass="objectLabelTip"/><apex:outputText value="{!r.rt.Name}" styleClass="objectLabelTip"/>
+	                                                            <apex:outputText value="Developer Name:" styleClass="objectNameTip"/><apex:outputText value="{!r.developerName}" styleClass="objectNameTip"/>
+	                                                            <apex:outputText value="isAvailable:"/><img src="{!IF(r.isAvailable,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                            <apex:outputText value="isDefault:"/><img src="{!IF(r.isDefaultRecordTypeMapping,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+	                                                        </apex:panelGrid>
+	                                                    </div>
+	                                                </div>
+                                                </div>     
+                                            </apex:repeat>
+                                        </div>
+                                        
+                                        <div class="clearFix"/>
+        
+                                        <!-- TABLE -->
+                                        <div id="recordTypeTableSection" style="display: {!IF(recordTypeLayout == 'list','block','none')};">
+                                            <apex:pageBlockTable id="recordTypeTable" value="{!recordTypes}" var="r" rendered="{!AND(NOT(ISNULL(recordTypes)),recordTypes.size > 0)}" styleClass="tablesorter">
+                                                <apex:column >
+                                                	<apex:facet name="header">
+                                                    	<div class="tableHeaderLabel">Name</div>
+                                                    	<div class="sortDirectionIndicator"></div>
+                                                    </apex:facet>
+                                                    {!r.rt.name}
+                                                    <!-- Hidden fields are used for filtering -->
+                                                    <apex:outputPanel id="name" styleClass="labelFilterValue">{!r.rt.name}</apex:outputPanel>
+                                                </apex:column>
+                                                <apex:column >
+                                                	<apex:facet name="header">
+                                                    	<div class="tableHeaderLabel">Developer Name</div>
+                                                    	<div class="sortDirectionIndicator"></div>
+                                                    </apex:facet>
+                                                    {!r.developerName}
+                                                    <apex:outputPanel id="devname" styleClass="nameFilterValue">{!r.developerName}</apex:outputPanel>
+                                                </apex:column>
+                                                <apex:column >
+                                                    <apex:facet name="header">
+                                                    	<div class="tableHeaderLabel">Record Type Id</div>
+                                                    	<div class="sortDirectionIndicator"></div>
+                                                    </apex:facet>
+                                                    {!r.Id}
+                                                </apex:column>
+                                                <apex:column >
+                                                	<apex:facet name="header">
+                                                    	<div class="tableHeaderLabel">Available</div>
+                                                    	<div class="sortDirectionIndicator"></div>
+                                                    </apex:facet>
+                                                    <img src="{!IF(r.isAvailable,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+                                                	<!-- For table sorting -->
+                                                	<span class="hidden">{!IF(r.isAvailable,"1","0")}</span>   
+                                                </apex:column>
+                                                <apex:column >
+                                                	<apex:facet name="header">
+                                                    	<div class="tableHeaderLabel">Default</div>
+                                                    	<div class="sortDirectionIndicator"></div>
+                                                    </apex:facet>
+                                                    <img src="{!IF(r.isDefaultRecordTypeMapping,URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_checked.gif'),URLFOR($Resource.SchemaSurfer__SchemaSurferFiles, 'img/checkbox_unchecked.gif'))}"/>                                
+                                                	<!-- For table sorting -->
+                                                	<span class="hidden">{!IF(r.isDefaultRecordTypeMapping,"1","0")}</span>   
+                                                </apex:column>
+                                            </apex:pageBlockTable>
+                                        </div>
+                                        
+                                        <div class="noMatches">
+                                        	No matches found.
+                                        </div>
+                                    </div>
+                                </apex:panelGroup>
+                            </apex:panelGrid>
+                          
+                        </apex:pageBlock>
+                    </apex:outputPanel>
+                </td>
+            </tr>
+        </table>
+        
+        <!--Action Functions-->
+        <apex:actionFunction name="selectObject" action="{!selectObject}" reRender="displayVars,mainDetail,history" status="status" oncomplete="scrollToTop(); rerenderComplete(); updateSettings();">
+            <apex:param name="objectName" assignTo="{!objectName}" value=""/>
+        </apex:actionFunction>
+        
+        <apex:actionFunction name="updateSettings" action="{!updateSettings}" reRender="displayVars"/>
+    </apex:form>
+    
+    <div id="helpModal" title="Useful Tips">
+		<iframe id="helpIframe" src=""/>
+	</div>
+    
+</apex:component>

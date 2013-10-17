@@ -1,0 +1,232 @@
+<apex:page controller="compositionExample" showheader="false" sidebar="false">
+<apex:messages />
+<!--<apex:composition template="Test_composition">
+ <apex:define name="meal">
+<apex:outputLabel value="Enter your favorite meal: " for="mealField"/>
+<apex:inputText id="mealField" value="{!mealField}"/>
+</apex:define>
+<apex:define name="age">
+<apex:outputLabel value="Enter your age: " for="ageField"/>
+<apex:inputText id="ageField" value="{!ageField}"/>
+</apex:define>
+<apex:outputLabel value="Enter your favorite color: " for="colorField"/>
+<apex:inputText id="colorField" value="{!colorField}"/> -->
+<head>
+<style>
+#map {
+  font-family: Arial;
+  font-size:12px;
+  line-height:normal !important;
+  height:310px;
+  width:450px;
+  background:transparent;
+}
+
+#wrapper {
+    width: 90%;
+    margin: 20px auto;
+    text-align: center;
+    font-family: Georgia, serif;
+    color: #222;
+}
+.bigimage-container {
+    padding: 0px;
+}
+.bigimage-container span 
+{
+    display: block;
+    margin: 0 auto;
+    padding: 0px;
+    width: 412px;
+    }
+.bigimage-container span img 
+{
+    border: 1px solid #CCCCCC;
+    padding: 5px;
+    }   
+
+.thumbnail-container {
+    background-image : url({!URLFOR($Resource.ENT_LIHTC_Beauty_Shot, 'thumb-bg.png')});
+    center 25px transparent;
+    display: inline-block;
+    left: 0;
+    overflow: hidden;
+    padding: 5px 40px;
+    position: relative;
+    width: 470px;
+    height: 80px;
+    background-repeat: no-repeat;
+}
+.thumbnail-container .thumbnail-wrap { 
+    float: left;
+    height: 50px;
+    overflow: hidden;
+    width: 474px;
+    }
+.thumbnail-container .thumbnail-wrap ul {
+    
+    height: 50px;
+    margin: 1px 0;
+    padding: 0;
+    position: relative;
+}
+.thumbnail-container .thumbnail-wrap li { margin:0 2px; padding:0; float:left; list-style:none; opacity: 0.5; }
+.thumbnail-container .thumbnail-wrap li:hover { opacity: 1; }
+.thumbnail-container .thumbnail-wrap li.selected { opacity: 1; }
+
+.thumbnail-container a.left-arrow {
+    background-image : url({!URLFOR($Resource.ENT_LIHTC_Beauty_Shot, 'right-arrow.png')});
+    background-position : center top;
+    background-repeat : no-repeat; 
+    background-color:transparent;
+    display: block;
+    float: left;
+    height: 14px;
+    left: 15px;
+    position: absolute;
+    top: 25px;
+    width: 11px;
+
+}
+
+.thumbnail-container a.right-arrow {
+    background-image : url({!URLFOR($Resource.ENT_LIHTC_Beauty_Shot, 'left-arrow.png')});
+    background-position : center top;
+    background-repeat : no-repeat; 
+    background-color:transparent;
+    center top transparent;
+    display: block;
+    float: right;
+    height: 14px;
+    position: absolute;
+    right: 15px;
+    top: 25px;
+    width: 11px;
+}
+.table { border:1px solid #cbcaca;}
+.row1 { background-color:#f2f2f2; border-bottom:1px solid #cbcaca; padding:2px;}
+.row2 { background-color:#fff; border-bottom:1px solid #cbcaca; padding:2px;}
+.imagetitle {
+    color: #000000;
+    font-family: arial;
+    font-size: 18px;
+    padding: 0;
+    text-align: center;
+    width: 537px;
+    padding-bottom: 20px;
+}
+#map {border: 1px solid #ccc;}   
+</style>
+
+<style>
+       .customPopup{
+            background-color: white;
+            border-style: solid;
+            border-width: 2px;
+            left: 50%;
+            padding:10px;
+            position: absolute;
+            z-index: 9999;
+            width: 500px;
+            margin-left: -250px;
+            top:700px;
+        }
+    </style>
+<script type="text/javascript"> 
+
+$(document).ready(function() {
+
+  var myOptions = {
+    zoom: 15,
+    mapTypeId: google.maps.MapTypeId.ROADMAP,
+    mapTypeControl: false
+  }
+
+  var map;
+  var marker;
+
+  var geocoder = new google.maps.Geocoder();
+  var address = "{!dealAddress}, " + "{!dealCity}, " + "{!dealPostalCode}, " + "{!dealCounty}";
+  var infowindow = new google.maps.InfoWindow({
+    content: "<br>{!dealAddress}<br>{!dealCity}, {!dealPostalCode}<br>{!dealCounty}"
+ });
+
+  geocoder.geocode( { address: address}, function(results, status) {
+    if (status == google.maps.GeocoderStatus.OK && results.length) {
+      if (status != google.maps.GeocoderStatus.ZERO_RESULTS) {
+
+        //create map
+        map = new google.maps.Map(document.getElementById("map"), myOptions);
+
+        //center map
+        map.setCenter(results[0].geometry.location);
+
+        //create marker
+        marker = new google.maps.Marker({
+            position: results[0].geometry.location,
+            map: map,
+            title: "{!dealAddress}"
+        });
+
+        //add listeners
+        google.maps.event.addListener(marker, 'click', function() {
+          infowindow.open(map,marker);
+        });
+        google.maps.event.addListener(infowindow, 'closeclick', function() {
+          map.setCenter(marker.getPosition()); 
+        });
+
+      }
+
+    } else {
+      $('#map').css({'height' : '15px'});
+      $('#map').html("Oops! {!dealAddress} address could not be found, please make sure the address is correct.");
+    }
+  });
+
+  function resizeIframe() {
+    var me = window.name;
+    if (me) {
+      var iframes = parent.document.getElementsByName(me);
+      if (iframes && iframes.length == 1) {
+        height = document.body.offsetHeight;
+        iframes[0].style.height = height + "px";
+      }
+    }
+  }
+
+});
+</script>    
+ 
+</head>
+
+
+<apex:composition template="Test_composition">
+<apex:define name="meal">
+           
+
+           <apex:message rendered="true" ></apex:message>
+           <div id="wrapper" style="background-color:white;height:500px;width:1100px;">
+
+<apex:pageBlock mode="maindetail">
+    <apex:pageBlockSection ><center>
+     <apex:pageBlockSectionItem >
+        <apex:outputLabel value="Test Deal" style="text-align:center; font-size:20px; font-weight:bold;"></apex:outputLabel>
+     </apex:pageBlockSectionItem></center>
+    </apex:pageBlockSection> 
+   
+       <apex:pageblockSection columns="2">
+     <apex:pageBlockSectionItem dataStyleClass="bigimage-container">
+         <apex:image width="400px" url="/sfc/servlet.shepherd/version/renditionDownload?rendition=THUMB720BY480&versionId={!CoverPhotoImage}" alt="Cover Photo"/>
+     </apex:pageBlockSectionItem>
+        
+     <apex:pageBlockSectionItem >
+          <div id="map"> </div>
+     </apex:pageBlockSectionItem>
+    </apex:pageBlockSection> <br/>
+</apex:pageBlock></div>
+</apex:define>
+</apex:composition>
+<!--<apex:outputText id="greeting" rendered="{!showGreeting}" value="Hello {!nameField}.
+You look {!ageField} years old. Would you like some {!colorField} {!mealField}?"/> -->
+</apex:page>
